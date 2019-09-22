@@ -4,6 +4,8 @@ This project uses LexisNexis's HPCC Systems and ECL to analyze databases of cred
 
 ***Technologies Used:** ECL with ECL-ML library, HPCC Systems, SQL, Python* 
 
+---
+
 ### File Run Order: 
 **First import transactions & identity** (doesn't matter which you import first, but this HAS to be complete before running job 05)
 
