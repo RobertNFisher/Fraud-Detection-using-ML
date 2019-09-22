@@ -1,6 +1,8 @@
 ﻿IMPORT  Fraud_ECL;
 IMPORT DataPatterns;
 
+//SKIPPABLE -- ONLY NEED TO RUN ONCE
+
 rawTransactionsData := Fraud_ECL.Files.transactions_raw_ds;
 OUTPUT(rawTransactionsData, NAMED('rawTransactionsDataSample'));
 
