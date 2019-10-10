@@ -1,4 +1,5 @@
-﻿IMPORT STD;
+IMPORT STD;
+IMPORT ML;
 
 /* CHECK 01_DATA_IMPORT_JOB.ECL TO MAKE SURE THAT YOU ECL WATCH INFORMATION IS INPUT CORRECTLY TO GET THE FILES TO SPRAY TO YOUR LANDING ZONE */
 
@@ -622,6 +623,59 @@ EXPORT Files := MODULE
 					STRING7 DeviceType;
 					STRING43 DeviceInfo;
 			END;
+			
+				// Create a splitter to create a training and testing sets
+			
+			dataSpliter := RECORD(transactions_enriched_layout)
+							
+							UNSIGNED4 rnd; //a Random Number
+			END;
+			
+					// Give each record a random number to tag for splitting
+					
+				taggedDataSet := PROJECT(transactions_clean_ds, TRANSFORM(dataSpliter,
+																															SELF.rnd := RANDOM(),
+																															SELF := LEFT));
+				
+					// Data is shuffled when sorted by random numbers
+					
+				taggedDataSetSorted := SORT(taggedDataSet, rnd);
+				
+					// Split data into training data and testing data
+					
+				transactionTrainData := PROJECT(taggedDataSetSorted(1..413700), transactions_enriched_layout);	// Treat first 70% of data as training data
+				
+				transactionTestData := PROJECT(taggedDataSetSorted(413700..590540), transactions_enriched_layout); // Treat last 30% of data as testing data
+				
+				// Convert datasets into numeric fields for the learning models
+				// NOTE: We can control which features we consider in our model at this point by concatinating in the parameters ",,'feature_1, feature_3, feature_x, etc'"
+				
+				ML.ToField(transactionTrainData, transactionTrainDataNF);
+				
+				ML.ToField(transactionTestData, transactionTestDataNF);
+				
+				// Seperate label from train data and test_data
+				IndependentTrainData = transactionTrainData(number > 1);	//Train Features
+				
+				DependentTrainData = transactionTrainData(number = 1), TRANSFORM(RECORDOF(LEFT), SELF.number := 1, SELF := LEFT)); //Train Labels
+				
+				IndependentTestData = transactionTestData(number > 1);	// Test Features
+				
+				DependentTestData = transactionTestData(number = 1), TRANSFORM(RECORDOF(LEFT), SELF.number := 1, SELF := LEFT)); // Test Labels
+				
+				// Using labels and Features, Create a logistic regression Model
+				
+				LogReference := ML.Classify.Logistic();
+				
+				LogModel := LogReference.LearnC(IndependentTrainData, DependentTrainData);
+				
+				// Pass Test features with the model to create a predictions chart for given inputs
+				
+				predictions := LogReference.ClassifyC(IndependentTestData, LogModel);
+				
+				// Pass the predictions to a comparator to check for accuracy
+				
+				comparison := LogReference.TestD(DependentTestData, predictions);
 				
 	//			EXPORT transactions_enriched_ds := DATASET(transactions_enriched_file_path, transactions_enriched_layout, THOR);
 				
