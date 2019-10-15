@@ -116,58 +116,6 @@ EXPORT Files := MODULE
 					STRING43 DeviceInfo;
 	      END;
 
-        EXPORT identity_clean_ds := DATASET(identity_clean_file_path, identity_clean_layout, THOR);   
-
-// PARSED RECORD LAYOUT, PATH, AND DATASET		
-			//	EXPORT identity_parsed_file_path := file_scope + '::' + project_scope + '::' + out_files_scope + '::' + identity + '_parsed_results.thor';
-				//EXPORT identity_parsed_layout := RECORD
-//						STRING8 identity_id;    						//base36 identity ID
-//						STRING9 post_ID;				  					//FORMERLY 'NAME'
-//						STRING title;												//full title text
-	//					STRING100 cross_phrase;							//full pattern match found
-	//					STRING30 cross_identity_phrase;		//whole phrase relating to crossposted identity
-	//					STRING24 cross_identity_name;			//just the name of the crossposted identity (no 'r') -- CONVERTED TO LOWERCASE
-	//					STRING8 cross_identity_ID;				  //base36_ID of cross-posted identity 
-	//			END;
-				
-	//			EXPORT identity_parsed_ds := DATASET(identity_parsed_file_path, identity_parsed_layout, THOR);
-				
- //ENRICHED RECORD LAYOUT, PATH, AND DATASET		-- here the cross-posted sub is confirmed to exist and the base36_ID of that sub is substituted for the name
-	//			EXPORT identity_enriched_file_path := file_scope + '::' + project_scope + '::' + out_files_scope + '::' + identity + '_enriched_results.thor';
-	//			EXPORT identity_enriched_layout := RECORD
-	//					STRING8 identity_id;    						//base36 identity ID
-	//					STRING9 post_ID;				  					//FORMERLY 'NAME'
-	//					STRING title;										//full title text
-	//					STRING100 cross_phrase;							//full pattern match found
-	//					STRING30 cross_identity_phrase;		//whole phrase relating to crossposted identity
-	//					STRING24 cross_identity_name;			//just the name of the crossposted identity (no 'r') 
-	//					STRING8 cross_identity_ID;				  //base36_ID of cross-posted identity 
-	//			END;
-				
-	//			EXPORT identity_enriched_ds := DATASET(identity_enriched_file_path, identity_enriched_layout, THOR);
-				
-				
-//identity DIRECTORY RECORD LAYOUT AND DATASET	
-		//		EXPORT identity_directory_layout := RECORD
-		//			  UNSIGNED4 base10_id;
-	//					STRING8 base36_id;
-					//	STRING24 identity_name;
-				//		UNSIGNED4 subscribers;
-			//	END;
-				
-				//EXPORT identity_directory := DATASET('~cr::identity_directory::out::identity_directory_clean.thor', identity_directory_layout, THOR);
-				
-//MASTER OUTPUT RECORD LAYOUT AND DATASET	
-				//this file contains a list of the top 2500 subs and their base36_IDs (if found in directory)
-			//	EXPORT MASTER_FILE_PATH := '~cr::identitys_directory::out::MASTER_OUTPUT.thor';
-			
-		//		EXPORT identitys_master_output_layout := RECORD
-		//				STRING8  to_base36_id;					  
-		//				STRING24 to_identity_name;
-	//			END;			
-
-				//EXPORT MASTER_FILE := DATASET(MASTER_FILE_PATH, identitys_master_output_layout, THOR);
-				
-			//	EXPORT CHILD_FILE_PATH := file_scope + '::' + project_scope + '::' + final_files_scope + '::' + identity + '_master_results.thor';
+        EXPORT identity_clean_ds := DATASET(identity_clean_file_path, identity_clean_layout, THOR);  
 			
  END;
