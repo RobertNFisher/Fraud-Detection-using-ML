@@ -1,5 +1,4 @@
-IMPORT STD;
-IMPORT ML;
+﻿IMPORT STD;
 
 /* CHECK 01_DATA_IMPORT_JOB.ECL TO MAKE SURE THAT YOU ECL WATCH INFORMATION IS INPUT CORRECTLY TO GET THE FILES TO SPRAY TO YOUR LANDING ZONE */
 
@@ -505,7 +504,7 @@ EXPORT Files := MODULE
         EXPORT transactions_clean_ds := DATASET(transactions_clean_file_path, transactions_clean_layout, THOR);
 	
 				
- //ENRICHED RECORD LAYOUT, PATH, AND DATASET		-- here the cross-posted sub is confirmed to exist and the base36_ID of that sub is substituted for the name
+ //ENRICHED RECORD LAYOUT, PATH, AND DATASET		
 				EXPORT transactions_enriched_file_path := file_scope + '::' + project_scope + '::' + out_files_scope + '::' + transactions + '_enriched_results.thor';
 				
 				EXPORT transactions_enriched_layout := RECORD
@@ -622,62 +621,130 @@ EXPORT Files := MODULE
 					STRING1 id_38;
 					STRING7 DeviceType;
 					STRING43 DeviceInfo;
+			END; //95 Features
+				
+			EXPORT transactions_enriched_ds := DATASET(transactions_enriched_file_path, transactions_enriched_layout, THOR);
+			
+//LOGISTIC REGRESSION RECORD LAYOUT, PATH, AND DATASET		-- ML MODEL
+				EXPORT transactions_logreg_file_path := file_scope + '::' + project_scope + '::' + out_files_scope + '::' + transactions + '_logistic_regression_results.thor';
+				
+				EXPORT transactions_logreg_layout := RECORD
+					UNSIGNED4 TransactionID;		//Tells with 1 or 0 if the transaction is fruadulent, 1 being true
+					UNSIGNED1 isFraud;
+					UNSIGNED4 TransactionDT;		//TransactionDT: timedelta from a given reference datetime (not an actual timestamp)
+																					//“TransactionDT first value is 86400, which corresponds to the number of seconds in a day (60 * 60 * 24 = 86400) 
+																					//so I think the unit is seconds. Using this, we know the data spans 6 months, as the maximum value is 15811131, 
+																					//which would correspond to day 183.”
+					REAL8 TransactionAmt;
+					STRING1 ProductCD;					//ProductCD: product code, the product for each transaction
+																					//“Product isn't necessary to be a real 'product' (like one item to be added to the shopping cart).
+																					//It could be any kind of service.”
+					UNSIGNED3 cInfo1;
+					REAL4 cInfo2;
+					REAL4 cInfo3;
+					STRING16 cInfo4;
+					REAL4 cInfo5;
+					STRING15 cInfo6;
+					REAL4 addr1;								//addr1 + " " + addr2 = entire card holders address.
+					REAL4 addr2;
+					REAL4 dist1;								//dist1+dist2 = distances between (not limited) 
+																					//billing address, mailing address, zip code, IP address, phone area, etc.
+																					// kept secret for privacy
+					REAL4 dist2;
+					STRING16 P_emaildomain;		//P_ purchaser R_ Recipient
+					STRING16 R_emaildomain;
+					//C1-C14: counting, such as how many addresses are found to be associated with the payment card, etc.
+									//The actual meaning is masked.
+									//“Can you please give more examples of counts in the variables C1-15? Would these be like counts of phone numbers, email addresses, names associated with the user? I can't think of 15.
+									//Your guess is good, plus like device, ipaddr, billingaddr, etc. 
+									//Also these are for both purchaser and recipient, which doubles the number.”
+											//Maybe combine these?
+					REAL4 associated_addr1;
+					REAL4 associated_addr2;
+					REAL4 associated_addr3;
+					REAL4 associated_addr4;
+					REAL4 associated_addr5;
+					REAL4 associated_addr6;
+					REAL4 associated_addr7;
+					REAL4 associated_addr8;
+					REAL4 associated_addr9;
+					REAL4 associated_addr10;
+					REAL4 associated_addr11;
+					REAL4 associated_addr12;
+					REAL4 associated_addr13;
+					REAL4 associated_addr14;
+		
+			//D1-D15: timedelta, such as days between previous transaction, etc.
+					REAL4 time_delta1;
+					REAL4 time_delta2;
+					REAL4 time_delta3;
+					REAL4 time_delta4;
+					REAL4 time_delta5;
+					REAL4 time_delta6;
+					REAL4 time_delta7;
+					STRING19 time_delta8;
+					STRING19 time_delta9;
+					REAL4 time_delta10;
+					REAL4 time_delta11;
+					REAL4 time_delta12;
+					REAL4 time_delta13;
+					REAL4 time_delta14;
+					REAL4 time_delta15;
+					//M1-M9: match, such as names on card and address, etc.
+							//Mx is attribute of matching check, e.g. is phone areacode matched with billing zipcode,
+							//purchaser and recipient first/or last name match, etc.
+					STRING1 match1;
+					STRING1 match2;
+					STRING1 match3;
+					STRING2 match4;
+					STRING1 match5;
+					STRING1 match6;
+					STRING1 match7;
+					STRING1 match8;
+					STRING1 match9;
+					REAL4 id_01;
+					REAL8 id_02;
+					REAL4 id_03;
+					REAL4 id_04;
+					REAL4 id_05;
+					REAL4 id_06;
+					REAL4 id_07;
+					REAL4 id_08;
+					REAL4 id_09;
+					REAL4 id_10;
+					REAL4 id_11;
+					REAL8 id_12;
+					REAL4 id_13;
+					REAL4 id_14;
+					STRING7 id_15;
+					STRING8 id_16;
+					REAL4 id_17;
+					REAL4 id_18;
+					REAL4 id_19;
+					REAL4 id_20;
+					REAL4 id_21;
+					REAL4 id_22;
+					STRING20 id_23;
+					REAL4 id_24;
+					REAL4 id_25;
+					REAL4 id_26;
+					STRING8 id_27;
+					STRING5 id_28;
+					STRING8 id_29;
+					STRING16 id_30;
+					STRING30 id_31;
+					REAL4 id_32;
+					STRING9 id_33;
+					STRING15 id_34;
+					STRING1 id_35;
+					STRING1 id_36;
+					STRING1 id_37;
+					STRING1 id_38;
+					STRING7 DeviceType;
+					STRING43 DeviceInfo;
 			END;
-			
-				// Create a splitter to create a training and testing sets
-			
-			dataSpliter := RECORD(transactions_enriched_layout)
-							
-							UNSIGNED4 rnd; //a Random Number
-			END;
-			
-					// Give each record a random number to tag for splitting
-					
-				taggedDataSet := PROJECT(transactions_clean_ds, TRANSFORM(dataSpliter,
-																															SELF.rnd := RANDOM(),
-																															SELF := LEFT));
 				
-					// Data is shuffled when sorted by random numbers
-					
-				taggedDataSetSorted := SORT(taggedDataSet, rnd);
-				
-					// Split data into training data and testing data
-					
-				transactionTrainData := PROJECT(taggedDataSetSorted(1..413700), transactions_enriched_layout);	// Treat first 70% of data as training data
-				
-				transactionTestData := PROJECT(taggedDataSetSorted(413700..590540), transactions_enriched_layout); // Treat last 30% of data as testing data
-				
-				// Convert datasets into numeric fields for the learning models
-				// NOTE: We can control which features we consider in our model at this point by concatinating in the parameters ",,'feature_1, feature_3, feature_x, etc'"
-				
-				ML.ToField(transactionTrainData, transactionTrainDataNF);
-				
-				ML.ToField(transactionTestData, transactionTestDataNF);
-				
-				// Seperate label from train data and test_data
-				IndependentTrainData = transactionTrainData(number > 1);	//Train Features
-				
-				DependentTrainData = transactionTrainData(number = 1), TRANSFORM(RECORDOF(LEFT), SELF.number := 1, SELF := LEFT)); //Train Labels
-				
-				IndependentTestData = transactionTestData(number > 1);	// Test Features
-				
-				DependentTestData = transactionTestData(number = 1), TRANSFORM(RECORDOF(LEFT), SELF.number := 1, SELF := LEFT)); // Test Labels
-				
-				// Using labels and Features, Create a logistic regression Model
-				
-				LogReference := ML.Classify.Logistic();
-				
-				LogModel := LogReference.LearnC(IndependentTrainData, DependentTrainData);
-				
-				// Pass Test features with the model to create a predictions chart for given inputs
-				
-				predictions := LogReference.ClassifyC(IndependentTestData, LogModel);
-				
-				// Pass the predictions to a comparator to check for accuracy
-				
-				comparison := LogReference.TestD(DependentTestData, predictions);
-				
-	//			EXPORT transactions_enriched_ds := DATASET(transactions_enriched_file_path, transactions_enriched_layout, THOR);
+			EXPORT transactions_logreg_ds := DATASET(transactions_logreg_file_path, transactions_logreg_layout, THOR);
 				
 				
 //transactions DIRECTORY RECORD LAYOUT AND DATASET	
