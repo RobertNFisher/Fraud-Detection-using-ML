@@ -16,9 +16,7 @@ for i in f_array:
         rd.append(i)
 
 
-print(len(f_array))
-print(len(rd))
-print(''.join(rd))
+
 for i in rd:
     temp = i.replace("\n","")
     data.drop(temp, axis = 1, inplace = True)
