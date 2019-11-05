@@ -1,6 +1,5 @@
 ﻿IMPORT STD;
 IMPORT Fraud_ECL;
-//EXPORT movies := 'todo';
 import LearningTrees as LT;
 import ML_Core;
 import ML_Core.Discretize;
