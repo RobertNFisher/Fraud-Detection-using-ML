@@ -1,9 +1,73 @@
 ﻿IMPORT STD;
-IMPORT Fraud_ECL;
+IMPORT ReducedData.Fraud_ECL;
 IMPORT ML_Core AS ML;
 IMPORT LogisticRegression AS LR;
 
-			transactions := Fraud_ECL.Files.transactions_clean_ds;
+			/*
+					Seperates fraud cases from non-fraud cases
+			*/
+
+			// Organizes Dataset into fraud cases
+			organizedDataSet := SORT(Fraud_ECL.Files.transactions_clean_ds, isFraud); 
+			Output(organizedDataSet, NAMED('organizedDataSet'));
+			
+			// Counts total size of record
+			Integer8 size := COUNT(organizedDataSet(organizedDataSet.isFraud IN [1,0])); 
+			Output(size, NAMED('size'));
+			
+			// Counts fraud cases
+			Integer8 fraudCases := COUNT(organizedDataSet(organizedDataSet.isFraud IN [1])); 
+			Output(fraudCases, NAMED('fraudCases'));
+			
+			// Determines breakpoint for where fraudCases should start
+			INTEGER8 breakPoint := size - fraudCases;	
+			
+			// Create a set of data that only consists of fraud cases
+			fraudCaseDataSet := organizedDataSet[breakPoint+1..size]; 
+			OUTPUT(fraudCaseDataSet, NAMED('fraudCaseDataSet')); 
+			
+			// Create a set of data that only consists of non-fraud cases 
+			// NOTE: Selects only 10000 as this is the limit for a WorkUnit, any repeats with fraud cases should be handled wit JOIN
+			largeNonFraudCaseDataSet := organizedDataSet[0..10000];  
+			OUTPUT(largeNonFraudCaseDataSet, NAMED('largeNonFraudCaseDataSet')); 
+			
+			
+			/*
+					Randomly selects an amount of nonFraud cases equal to the total number of given fraud cases
+			*/
+			dataSpliter := RECORD(Fraud_ECL.Files.transactions_clean_layout)
+							UNSIGNED4 rnd; //a Random Number
+			END;
+
+			// Give each record a random number to tag for splitting		
+			taggedDataSet := PROJECT(largeNonFraudCaseDataSet, TRANSFORM(dataSpliter, SELF.rnd := RANDOM(), SELF := LEFT));
+			
+			
+			// Data is shuffled when sorted by random numbers
+			taggedDataSetSorted := SORT(taggedDataSet, rnd);
+			
+			// Select an equal amount of fraud cases to be used for ML models
+			nonFraudCaseDataSet := taggedDataSetSorted[0..fraudCases-1];
+			
+			/*
+					Combines the selected fraud cases and nonfraud cases into an equally split 50/50 dataset
+			*/
+			
+			// Creates a new data set consisting of all 
+			evenDataSet := JOIN(fraudCaseDataSet,nonFraudCaseDataSet, LEFT.transactionId = RIGHT.transactionId, FULL OUTER);
+			OUTPUT(evenDataSet, NAMED('evenDataSet'));
+			
+			/*
+					Randomly orders cases of fraud and non-fraud cases
+			*/
+			
+			// Give each record a random number to tag for splitting		
+			randomDataSet := PROJECT(evenDataSet, TRANSFORM(dataSpliter, SELF.rnd := RANDOM(), SELF := LEFT));
+			
+			
+			// Data is shuffled when sorted by random numbers
+			transactions := SORT(randomDataSet, rnd);
+			OUTPUT(transactions, NAMED('transactions'));
 
 			reducedLayout := record
 					UNSIGNED4 TransactionID := transactions.TransactionID;		
@@ -128,37 +192,26 @@ IMPORT LogisticRegression AS LR;
 					UNSIGNED DECIMAL15 V311 := transactions.V311;
 					UNSIGNED DECIMAL15 V313 := transactions.V313;
 			end;
-
-
+		
 
 			placeHolder := TABLE(transactions, reducedLayout);
 			testSet := placeHolder();
 			OUTPUT(testSet,NAMED('Test_Set'));
-
-			dataSplitter := record(reducedLayout)
-				UNSIGNED4 rnd;
-			END;
 			
-			
-			// Give each record a random number to tag for splitting		
-			taggedDataSet := PROJECT(testSet, TRANSFORM(dataSplitter, SELF.rnd := RANDOM(), SELF := LEFT));
-			
-			
-			// Data is shuffled when sorted by random numbers
-			taggedDataSetSorted := SORT(taggedDataSet, rnd);
+			INTEGER8 totalRecords := COUNT(testSet);
 			
 			//enrichedLimited[{taggedDataSetSorted(transactionID != 0 AND transactionAMT != 0.0) AND NOT [TransactionDT, ProductCD, cInfo1, cInfo2, cInfo3, cInfo4, cInfo5, cInfo6, addr1, addr2, dist1, dist2, P_emaildomain, R_emaildomain, associated_addr1, associated_addr2, associated_addr3, associated_addr4, associated_addr5, associated_addr6, associated_addr7, associated_addr8, associated_addr9, associated_addr10, associated_addr11, associated_addr12, associated_addr13, associated_addr14, time_delta1, time_delta2, time_delta3, time_delta4, time_delta5, time_delta6, time_delta7, time_delta8, time_delta9, time_delta10, time_delta11, time_delta12, time_delta13, time_delta14, time_delta15, match1, match2, match3, match4, match5, match6, match7, match8, match9, id_01, id_02, id_03, id_04, id_05, id_06, id_07, id_08, id_09, id_10, id_11, id_12, id_13, id_14, id_15, id_16, id_17, id_18, id_19, id_20, id_21, id_22, id_23, id_24, id_25, id_26, id_27, id_28, id_29, id_30, id_31, id_32, id_33, id_34, id_35, id_36, id_37, id_38, DeviceType, DeviceInfo]}];			
 			
 			// Split data into training data and testing data & project back to reduced layout since we don't need rnd anymore
-			transactionTrainData := PROJECT(taggedDataSetSorted[1..20668], reducedLayout);	// Treat first 70% of data as training data
-			transactionTestData := PROJECT(taggedDataSetSorted[20669..29527], reducedLayout); // Treat last 30% of data as testing data
+			transactionTrainData := PROJECT(testSet[1..totalRecords*7/10], reducedLayout);	// Treat first 70% of data as training data
+			transactionTestData := PROJECT(testSet[totalRecords*7/10..totalRecords], reducedLayout); // Treat last 30% of data as testing data
 				
 			// Convert datasets into numeric fields for the learning models
 			// NOTE: We can control which features we consider in our model at this point by concatinating in the parameters ",,'feature_1, feature_3, feature_x, etc'"
 			
-			ML.ToField(transactionTrainData, transactionTrainDataNF,,,,'isFraud,TransactionAmnt,TransactionDT,cInfo1,cInfo2,cInfo3');
+			ML.ToField(transactionTrainData, transactionTrainDataNF,,,,'isFraud,TransactionAmt,cInfo2,associated_addr13,cInfo1,V258,addr1,V283,time_delta7,cInfo5');
 				
-			ML.ToField(transactionTestData, transactionTestDataNF,,,,'isFraud,TransactionAmnt,TransactionDT,cInfo1,cInfo2,cInfo3');
+			ML.ToField(transactionTestData, transactionTestDataNF,,,,'isFraud,TransactionAmt,cInfo2,associated_addr13,cInfo1,V258,addr1,V283,time_delta7,cInfo5');
 				
 			// Seperate label from train data and test_data
 			IndependentTrainData := transactionTrainDataNF(number > 1);	//Train Features
@@ -185,14 +238,14 @@ IMPORT LogisticRegression AS LR;
 			
 			// Using labels and Features, Create a logistic regression Model
 			LogReference := LR.BinomialLogisticRegression();
-			LogModel := LogReference.getModel(FatIndependentTrainData, DepTrainDiscrete);
+			LogModel := LogReference.getModel(IndependentTrainData, DepTrainDiscrete);
 			
 			// Pass Test features with the model to create a predictions chart for given inputs
-			predictions := LogReference.Classify(LogModel, FatIndependentTestData);
+			predictions := LogReference.Classify(LogModel, IndependentTestData);
 			OUTPUT(predictions, NAMED('predictions'));
 				
 			// Pass the predictions to a comparator to check for accuracy
-			comparison := LogReference.Report(LogModel, FatIndependentTestData, DepTestDiscrete);
+			comparison := LogReference.Report(LogModel, IndependentTestData, DepTestDiscrete);
 			OUTPUT(comparison, NAMED('comparison'));
 			
 			// Pass the details of the comparison to construct a Confusion Matrix
